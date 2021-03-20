@@ -4,7 +4,7 @@
 
 *Current Version:* 0.9.15
 
-# xrdp - an open source RDP server
+# xrdp - an open source RDP server 
 
 ## Overview
 

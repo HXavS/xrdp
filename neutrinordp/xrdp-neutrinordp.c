@@ -182,18 +182,30 @@ lxrdp_connect(struct mod *mod)
         }
 
 #endif
-        LOG(LOG_LEVEL_ERROR, "freerdp_connect Failed to "
-            "destination :%s:%d",
+        LOG(LOG_LEVEL_ERROR, "NeutrinoRDP proxy connection: status [Failed],"
+            " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+            " xrdp pamusername [%s], xrdp process id [%d]",
+            mod->client_info.client_addr,
+            mod->client_info.client_port,
             mod->inst->settings->hostname,
-            mod->inst->settings->port);
+            mod->inst->settings->port,
+            mod->inst->settings->username,
+            mod->pamusername,
+            g_getpid());
         return 1;
     }
     else
     {
-        LOG(LOG_LEVEL_INFO, "freerdp_connect returned Success to "
-            "destination :%s:%d",
+        LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy connection: status [Success],"
+            " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+            " xrdp pamusername [%s], xrdp process id [%d]",
+            mod->client_info.client_addr,
+            mod->client_info.client_port,
             mod->inst->settings->hostname,
-            mod->inst->settings->port);
+            mod->inst->settings->port,
+            mod->inst->settings->username,
+            mod->pamusername,
+            g_getpid());
     }
 
     return 0;
@@ -433,6 +445,16 @@ lxrdp_end(struct mod *mod)
     }
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_end:");
+    LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy connection: status [Disconnect],"
+        " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+        " xrdp pamusername [%s], xrdp process id [%d]",
+        mod->client_info.client_addr,
+        mod->client_info.client_port,
+        mod->inst->settings->hostname,
+        mod->inst->settings->port,
+        mod->inst->settings->username,
+        mod->pamusername,
+        g_getpid());
     return 0;
 }
 
@@ -443,7 +465,15 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
 {
     rdpSettings *settings;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_set_param: name [%s] value [%s]", name, value);
+    if (g_strcmp(name, "password") == 0 || g_strcmp(name, "pampassword") == 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_set_param: name [%s] value [******]", name);
+    }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_set_param: name [%s] value [%s]", name, value);
+    }
+
     settings = mod->inst->settings;
 
     if (g_strcmp(name, "hostname") == 0)
@@ -491,6 +521,94 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     else if (g_strcmp(name, "nla") == 0)
     {
         settings->nla_security = g_text2bool(value);
+    }
+    else if (g_strcmp(name, "enable_dynamic_resizing") == 0)
+    {
+        settings->desktop_resize = g_text2bool(value);
+    }
+    else if (g_strcmp(name, "pamusername") == 0)
+    {
+        g_strncpy(mod->pamusername, value, 255);
+    }
+    else if (g_strcmp(name, "pampassword") == 0 ||
+             g_strcmp(name, "pamsessionmng") == 0)
+    {
+        /* Valid (but unused) parameters not logged */
+    }
+    else if (g_strcmp(name, "channel.rdpdr") == 0 ||
+             g_strcmp(name, "channel.rdpsnd") == 0 ||
+             g_strcmp(name, "channel.cliprdr") == 0 ||
+             g_strcmp(name, "channel.drdynvc") == 0)
+    {
+        /* Valid (but unused) parameters not logged */
+    }
+    else if (g_strcmp(name, "perf.allow_client_experiencesettings") == 0)
+    {
+        mod->allow_client_experiencesettings = g_text2bool(value);
+    }
+    else if (g_strcmp(name, "perf.wallpaper") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_WALLPAPER;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_WALLPAPER;
+        }
+    }
+    else if (g_strcmp(name, "perf.font_smoothing") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_ENABLE_FONT_SMOOTHING;
+        if (g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_ENABLE_FONT_SMOOTHING;
+        }
+    }
+    else if (g_strcmp(name, "perf.desktop_composition") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_ENABLE_DESKTOP_COMPOSITION;
+        if (g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_ENABLE_DESKTOP_COMPOSITION;
+        }
+    }
+    else if (g_strcmp(name, "perf.full_window_drag") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_FULLWINDOWDRAG;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_FULLWINDOWDRAG;
+        }
+    }
+    else if (g_strcmp(name, "perf.menu_anims") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_MENUANIMATIONS;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_MENUANIMATIONS;
+        }
+    }
+    else if (g_strcmp(name, "perf.themes") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_THEMING;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_THEMING;
+        }
+    }
+    else if (g_strcmp(name, "perf.cursor_blink") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_CURSORSETTINGS;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_CURSORSETTINGS;
+        }
+    }
+    else if (g_strcmp(name, "perf.cursor_shadow") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_CURSOR_SHADOW;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_CURSOR_SHADOW;
+        }
     }
     else
     {
@@ -596,6 +714,27 @@ lxrdp_suppress_output(struct mod *mod, int suppress,
 #if defined(NEUTRINORDP_HAS_SUPPRESS_OUTPUT)
     mod->inst->SendSuppressOutput(mod->inst, !suppress, left, top, right, bottom);
 #endif
+    return 0;
+}
+
+/******************************************************************************/
+static int
+lxrdp_server_version_message(struct mod *mod)
+{
+    return 0;
+}
+
+/******************************************************************************/
+static int
+lxrdp_server_monitor_resize(struct mod *mod, int width, int height)
+{
+    return 0;
+}
+
+/******************************************************************************/
+static int
+lxrdp_server_monitor_full_invalidate(struct mod *mod, int width, int height)
+{
     return 0;
 }
 
@@ -1611,6 +1750,60 @@ lfreerdp_pre_connect(freerdp *instance)
         // | PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_CURSORSETTINGS;
     }
 
+    /* Allow users or administrators to configure the mstsc experience settings. #1903 */
+
+    if ((mod->allow_client_experiencesettings == 1) &&
+            (mod->client_info.mcs_connection_type == CONNECTION_TYPE_AUTODETECT))
+    {
+        /* auto-detect not yet supported - use default performance settings */
+    }
+    else if (mod->allow_client_experiencesettings == 1)
+    {
+        instance->settings->performance_flags =
+            (mod->client_info.rdp5_performanceflags &
+             /* Mask to avoid accepting invalid flags. */
+             (PERF_DISABLE_WALLPAPER |
+              PERF_DISABLE_FULLWINDOWDRAG |
+              PERF_DISABLE_MENUANIMATIONS |
+              PERF_DISABLE_THEMING |
+              PERF_DISABLE_CURSOR_SHADOW |
+              PERF_DISABLE_CURSORSETTINGS |
+              PERF_ENABLE_FONT_SMOOTHING |
+              PERF_ENABLE_DESKTOP_COMPOSITION));
+
+        LOG(LOG_LEVEL_DEBUG, "RDP client experience settings, "
+            "rdp5_performance_flags:[0x%08x], "
+            "masked performance_flags:[0x%08x]",
+            mod->client_info.rdp5_performanceflags,
+            instance->settings->performance_flags);
+
+        if (mod->client_info.rail_enable &&
+                (mod->client_info.rail_support_level > 0))
+        {
+            instance->settings->performance_flags |= (PERF_DISABLE_WALLPAPER |
+                    PERF_DISABLE_FULLWINDOWDRAG);
+            LOG(LOG_LEVEL_DEBUG, "Add in performance setting for Railsupport:"
+                "[0x%08x]", PERF_DISABLE_WALLPAPER |
+                PERF_DISABLE_FULLWINDOWDRAG);
+        }
+    }
+
+    LOG(LOG_LEVEL_DEBUG, "before overriding performance_flags:[0x%08x]",
+        instance->settings->performance_flags);
+    LOG(LOG_LEVEL_DEBUG, "perf_settings_override_mask:[0x%08x], "
+        "perf_settings_values_mask:[0x%08x]",
+        mod->perf_settings_override_mask,
+        mod->perf_settings_values_mask);
+
+    /* Clear bits for any overridden performance settings */
+    instance->settings->performance_flags &= ~mod->perf_settings_override_mask;
+
+    /* Add in overridden performance settings */
+    instance->settings->performance_flags |= mod->perf_settings_values_mask;
+
+    LOG(LOG_LEVEL_DEBUG, "final performance_flags:[0x%08x]",
+        instance->settings->performance_flags);
+
     instance->settings->compression = 0;
     instance->settings->ignore_certificate = 1;
 
@@ -2074,6 +2267,9 @@ mod_init(void)
     mod->mod_check_wait_objs = lxrdp_check_wait_objs;
     mod->mod_frame_ack = lxrdp_frame_ack;
     mod->mod_suppress_output = lxrdp_suppress_output;
+    mod->mod_server_version_message = lxrdp_server_version_message;
+    mod->mod_server_monitor_resize = lxrdp_server_monitor_resize;
+    mod->mod_server_monitor_full_invalidate = lxrdp_server_monitor_full_invalidate;
 
     mod->inst = freerdp_new();
     mod->inst->PreConnect = lfreerdp_pre_connect;

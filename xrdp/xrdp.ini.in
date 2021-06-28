@@ -111,6 +111,12 @@ grey=dedede
 ls_top_window_bg_color=009cb5
 
 ; width and height of login screen
+;
+; The default height allows for about 5 fields to be comfortably displayed
+; above the buttons at the bottom. To display more fields, make <ls_height>
+; larger, and also increase <ls_btn_ok_y_pos> and <ls_btn_cancel_y_pos>
+; below
+;
 ls_width=350
 ls_height=430
 
@@ -160,7 +166,8 @@ EnableSyslog=true
 #EnableProcessId=false
 
 [LoggingPerLogger]
-; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+; Note: per logger configuration is only used if xrdp is built with
+; --enable-devel-logging
 #xrdp.c=INFO
 #main()=INFO
 
@@ -181,9 +188,6 @@ tcutils=true
 
 ; for debugging xrdp, in section xrdp1, change port=-1 to this:
 #port=/tmp/.xrdp/xrdp_display_10
-
-; for debugging xrdp, add following line to section xrdp1
-#chansrvport=/tmp/.xrdp/xrdp_chansrv_socket_7210
 
 
 ;
@@ -214,8 +218,14 @@ port=-1
 ; Disable requested encodings to support buggy VNC servers
 ; (1 = ExtendedDesktopSize)
 #disabled_encodings_mask=0
+; Use this to connect to a chansrv instance created outside of sesman
+; (e.g. as part of an x11vnc console session). Replace '0' with the
+; display number of the session
+#chansrvport=DISPLAY(0)
 
-
+; Generic VNC Proxy
+; Tailor this to specific hosts and VNC instances by specifying an ip
+; and port and setting a suitable name.
 [vnc-any]
 name=vnc-any
 lib=libvnc.@lib_extension@
@@ -228,13 +238,43 @@ password=ask
 #pamsessionmng=127.0.0.1
 #delay_ms=2000
 
+; Generic RDP proxy using NeutrinoRDP
+; Tailor this to specific hosts by specifying an ip and port and setting
+; a suitable name.
 [neutrinordp-any]
 name=neutrinordp-any
+; To use this section, you should build xrdp with configure option
+; --enable-neutrinordp.
 lib=libxrdpneutrinordp.@lib_extension@
 ip=ask
 port=ask3389
 username=ask
 password=ask
+; Uncomment the following lines to enable PAM authentication for proxy
+; connections.
+#pamusername=ask
+#pampassword=ask
+#pamsessionmng=127.0.0.1
+; Currently NeutrinoRDP doesn't support dynamic resizing. Uncomment
+; this line if you're using a client which does.
+#enable_dynamic_resizing=false
+; By default, performance settings requested by the RDP client are ignored
+; and chosen by NeutrinoRDP. Uncomment this line to allow the user to
+; select performance settings in the RDP client.
+#perf.allow_client_experiencesettings=true
+; Override any experience setting by uncommenting one or more of the
+; following lines.
+#perf.wallpaper=false
+#perf.font_smoothing=false
+#perf.desktop_composition=false
+#perf.full_window_drag=false
+#perf.menu_anims=false
+#perf.themes=false
+#perf.cursor_blink=false
+; By default NeutrinoRDP supports cursor shadows. If this is giving
+; you problems (e.g. cursor is a black rectangle) try disabling cursor
+; shadows by uncommenting the following line.
+#perf.cursor_shadow=false
 
 ; You can override the common channel settings for each session type
 #channel.rdpdr=true
